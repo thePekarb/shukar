@@ -729,6 +729,12 @@ function HomePage({
             />
           ))}
         </div>
+
+        <div className="action-row" style={{ justifyContent: 'center', marginTop: 28 }}>
+          <Link className="button primary" to="/catalog">
+            Показать весь каталог
+          </Link>
+        </div>
       </section>
 
       <section className="section container">
@@ -1692,9 +1698,25 @@ function GalleryCarousel({
   const [dragOffset, setDragOffset] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const [visibleCount, setVisibleCount] = useState(() => {
+    if (typeof window === 'undefined') return 3
+    if (window.innerWidth < 600) return 1
+    if (window.innerWidth < 900) return 2
+    return 3
+  })
+
+  useEffect(() => {
+    const updateCount = () => {
+      const w = window.innerWidth
+      setVisibleCount(w < 600 ? 1 : w < 900 ? 2 : 3)
+    }
+    window.addEventListener('resize', updateCount)
+    return () => window.removeEventListener('resize', updateCount)
+  }, [])
 
   const total = slides.length
-  const canNavigate = total > 1
+  const maxIndex = Math.max(0, total - visibleCount)
+  const canNavigate = total > visibleCount
 
   useEffect(() => {
     if (lightboxIndex === null) {
@@ -1724,7 +1746,7 @@ function GalleryCarousel({
       return
     }
 
-    const bounded = (nextIndex + total) % total
+    const bounded = Math.max(0, Math.min(nextIndex, maxIndex))
     setIndex(bounded)
   }
 
@@ -1794,7 +1816,7 @@ function GalleryCarousel({
       <div className={compact ? 'gallery-carousel-shell compact' : 'gallery-carousel-shell'} data-reveal>
         <div className="gallery-carousel-head">
           <div className="gallery-carousel-meta">
-            <span>{index + 1} / {total}</span>
+            <span>{Math.min(index + 1, total)}–{Math.min(index + visibleCount, total)} / {total}</span>
           </div>
 
           <div className="gallery-carousel-controls">
@@ -1803,7 +1825,7 @@ function GalleryCarousel({
               className="gallery-arrow"
               aria-label="Предыдущий слайд"
               onClick={() => moveTo(index - 1)}
-              disabled={!canNavigate}
+              disabled={!canNavigate || index <= 0}
             >
               ←
             </button>
@@ -1812,7 +1834,7 @@ function GalleryCarousel({
               className="gallery-arrow"
               aria-label="Следующий слайд"
               onClick={() => moveTo(index + 1)}
-              disabled={!canNavigate}
+              disabled={!canNavigate || index >= maxIndex}
             >
               →
             </button>
@@ -1835,7 +1857,7 @@ function GalleryCarousel({
           <div
             className="gallery-track"
             style={{
-              transform: `translate3d(calc(${-index * 100}% + ${dragOffset}px), 0, 0)`,
+              transform: `translate3d(calc(${-index * (100 / visibleCount)}% - ${index * 12}px + ${dragOffset}px), 0, 0)`,
               transition: isDragging ? 'none' : undefined,
             }}
           >
@@ -1844,6 +1866,7 @@ function GalleryCarousel({
                 key={`${slide.title}-${slideIndex}`}
                 type="button"
                 className="gallery-slide"
+                style={{ minWidth: `calc(${100 / visibleCount}% - ${((visibleCount - 1) * 12) / visibleCount}px)` }}
                 onClick={() => handleSlideClick(slideIndex)}
               >
                 <img src={slide.image} alt={slide.title} loading="lazy" />

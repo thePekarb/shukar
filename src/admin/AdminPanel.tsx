@@ -597,14 +597,30 @@ export function AdminPanel({ isSupabaseConfigured, routeLink }: AdminPanelProps)
   }
 
   return (
-    <section className="section container">
-      <div className="admin-shell">
-        <div className="admin-topbar">
-          <div>
-            <p className="eyebrow">CMS и товары</p>
-            <h1 className="page-title">Админ-панель ЩУКАРЯ</h1>
+    <>
+      <div className="admin-floating-bar">
+        <div className="container admin-floating-inner">
+          <div className="admin-floating-left">
+            <span className="admin-floating-badge">Режим редактирования</span>
+            <div className="admin-tabs">
+              {[
+                ['editor', 'Визуальный режим'],
+                ['overview', 'Обзор'],
+                ['blocks', 'Блоки'],
+                ['products', 'Товары'],
+                ['posts', 'Советы и новости'],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  className={activeTab === value ? 'chip active' : 'chip'}
+                  onClick={() => setActiveTab(value as typeof activeTab)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="admin-actions">
+          <div className="admin-floating-right">
             <Link className="button secondary" to="/">
               Открыть сайт
             </Link>
@@ -613,533 +629,520 @@ export function AdminPanel({ isSupabaseConfigured, routeLink }: AdminPanelProps)
             </button>
           </div>
         </div>
-
-        <div className="admin-tabs">
-          {[
-            ['editor', 'Визуальный режим'],
-            ['overview', 'Обзор'],
-            ['blocks', 'Блоки'],
-            ['products', 'Товары'],
-            ['posts', 'Советы и новости'],
-          ].map(([value, label]) => (
-            <button
-              key={value}
-              className={activeTab === value ? 'chip active' : 'chip'}
-              onClick={() => setActiveTab(value as typeof activeTab)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {status && <p className="status-line">{status}</p>}
-
-        {activeTab === 'editor' && (
-          <AdminVisualEditor
-            blocks={blocks}
-            products={products}
-            posts={posts}
-            onUpdateBlock={updateBlock}
-            onSaveBlock={saveBlock}
-            onUploadBlockImage={uploadBlockImage}
-            onUpdateProduct={updateProduct}
-            onSaveProduct={saveProduct}
-            onUploadProductImage={uploadProductImage}
-            onRemoveProductImage={removeProductImage}
-            onUpdatePost={updatePost}
-            onSavePost={savePost}
-          />
-        )}
-
-        {activeTab === 'overview' && (
-          <div className="admin-grid">
-            <article className="admin-card">
-              <strong>Что уже подключено</strong>
-              <p>Auth для входа в `/adminpanel`, товары, изображения товаров, посты и контентные блоки.</p>
-            </article>
-            <article className="admin-card">
-              <strong>Что редактируется</strong>
-              <p>Hero и баннеры через `content_blocks`, товары и их характеристики через `products` и `product_specs`.</p>
-            </article>
-            <article className="admin-card">
-              <strong>Изображения</strong>
-              <p>Медиа загружается в buckets `site-media` и `product-media`. Для товара можно держать до 10 фото.</p>
-            </article>
-          </div>
-        )}
-
-        {activeTab === 'blocks' && (
-          <div className="admin-stack">
-            {Object.values(blocks).map((block) => (
-              <article key={block.key} className="admin-card">
-                <div className="admin-card-head">
-                  <strong>{block.key}</strong>
-                  <button className="button secondary" onClick={() => void saveBlock(block)}>
-                    Сохранить блок
-                  </button>
-                </div>
-                <div className="admin-form-grid">
-                  <label className="field">
-                    <span>Eyebrow</span>
-                    <input
-                      value={block.eyebrow}
-                      onChange={(event) =>
-                        setBlocks((current) => ({
-                          ...current,
-                          [block.key]: { ...block, eyebrow: event.target.value },
-                        }))
-                      }
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Заголовок</span>
-                    <input
-                      value={block.title}
-                      onChange={(event) =>
-                        setBlocks((current) => ({
-                          ...current,
-                          [block.key]: { ...block, title: event.target.value },
-                        }))
-                      }
-                    />
-                  </label>
-                  <label className="field full">
-                    <span>Текст</span>
-                    <textarea
-                      rows={4}
-                      value={block.text}
-                      onChange={(event) =>
-                        setBlocks((current) => ({
-                          ...current,
-                          [block.key]: { ...block, text: event.target.value },
-                        }))
-                      }
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Кнопка</span>
-                    <input
-                      value={block.actionLabel}
-                      onChange={(event) =>
-                        setBlocks((current) => ({
-                          ...current,
-                          [block.key]: { ...block, actionLabel: event.target.value },
-                        }))
-                      }
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Ссылка</span>
-                    <input
-                      value={block.actionTo}
-                      onChange={(event) =>
-                        setBlocks((current) => ({
-                          ...current,
-                          [block.key]: { ...block, actionTo: event.target.value },
-                        }))
-                      }
-                    />
-                  </label>
-                </div>
-                <div className="admin-media-row">
-                  {block.imageUrl ? <img src={block.imageUrl} alt="" className="admin-preview" /> : <div className="admin-preview placeholder">Нет изображения</div>}
-                  <div className="admin-actions">
-                    <label className="button ghost">
-                      Загрузить фото
-                      <input
-                        hidden
-                        type="file"
-                        accept="image/*"
-                        onChange={(event) => {
-                          const file = event.target.files?.[0]
-                          if (file) {
-                            void uploadBlockImage(block.key, file)
-                          }
-                        }}
-                      />
-                    </label>
-                    {block.imageUrl && (
-                      <button
-                        className="button secondary"
-                        onClick={() =>
-                          setBlocks((current) => ({
-                            ...current,
-                            [block.key]: { ...block, imageUrl: null },
-                          }))
-                        }
-                      >
-                        Убрать фото
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'products' && (
-          <div className="admin-stack">
-            <button
-              className="button primary"
-              onClick={() =>
-                setProducts((current) => [
-                  {
-                    category_slug: categories[0].slug,
-                    slug: `new-${Date.now()}`,
-                    name: 'Новый товар',
-                    brand: '',
-                    price: '',
-                    stock_status: 'В наличии',
-                    stock_quantity: 0,
-                    short_text: '',
-                    description: '',
-                    season: '',
-                    fish: '',
-                    water: '',
-                    method: '',
-                    material: '',
-                    badges_text: '',
-                    accent: 'linear-gradient(135deg, #183a43 0%, #2d4a3e 42%, #e0b57b 100%)',
-                    specs_text: '',
-                    images: [],
-                    is_published: true,
-                  },
-                  ...current,
-                ])
-              }
-            >
-              Добавить товар
-            </button>
-
-            {products.map((product, productIndex) => (
-              <article key={`${product.slug}-${productIndex}`} className="admin-card">
-                <div className="admin-card-head">
-                  <strong>{product.name || 'Новый товар'}</strong>
-                  <button className="button secondary" onClick={() => void saveProduct(product)}>
-                    Сохранить товар
-                  </button>
-                </div>
-                <div className="admin-form-grid">
-                  <label className="field">
-                    <span>Название</span>
-                    <input
-                      value={product.name}
-                      onChange={(event) =>
-                        setProducts((current) =>
-                          current.map((item, index) =>
-                            index === productIndex
-                              ? {
-                                  ...item,
-                                  name: event.target.value,
-                                  slug: item.slug.startsWith('new-') ? slugify(event.target.value) : item.slug,
-                                }
-                              : item,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Slug</span>
-                    <input
-                      value={product.slug}
-                      onChange={(event) =>
-                        setProducts((current) =>
-                          current.map((item, index) =>
-                            index === productIndex ? { ...item, slug: slugify(event.target.value) } : item,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Категория</span>
-                    <select
-                      value={product.category_slug}
-                      onChange={(event) =>
-                        setProducts((current) =>
-                          current.map((item, index) =>
-                            index === productIndex ? { ...item, category_slug: event.target.value } : item,
-                          ),
-                        )
-                      }
-                    >
-                      {categories.map((category) => (
-                        <option key={category.slug} value={category.slug}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="field">
-                    <span>Бренд</span>
-                    <input
-                      value={product.brand}
-                      onChange={(event) =>
-                        setProducts((current) =>
-                          current.map((item, index) =>
-                            index === productIndex ? { ...item, brand: event.target.value } : item,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Цена</span>
-                    <input
-                      value={product.price}
-                      onChange={(event) =>
-                        setProducts((current) =>
-                          current.map((item, index) =>
-                            index === productIndex ? { ...item, price: event.target.value } : item,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Остаток</span>
-                    <input
-                      type="number"
-                      value={product.stock_quantity}
-                      onChange={(event) =>
-                        setProducts((current) =>
-                          current.map((item, index) =>
-                            index === productIndex
-                              ? { ...item, stock_quantity: Number(event.target.value) || 0 }
-                              : item,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="field full">
-                    <span>Короткий текст</span>
-                    <textarea
-                      rows={2}
-                      value={product.short_text}
-                      onChange={(event) =>
-                        setProducts((current) =>
-                          current.map((item, index) =>
-                            index === productIndex ? { ...item, short_text: event.target.value } : item,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="field full">
-                    <span>Описание</span>
-                    <textarea
-                      rows={4}
-                      value={product.description}
-                      onChange={(event) =>
-                        setProducts((current) =>
-                          current.map((item, index) =>
-                            index === productIndex ? { ...item, description: event.target.value } : item,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Рыба</span>
-                    <input
-                      value={product.fish}
-                      onChange={(event) =>
-                        setProducts((current) =>
-                          current.map((item, index) =>
-                            index === productIndex ? { ...item, fish: event.target.value } : item,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Способ ловли</span>
-                    <input
-                      value={product.method}
-                      onChange={(event) =>
-                        setProducts((current) =>
-                          current.map((item, index) =>
-                            index === productIndex ? { ...item, method: event.target.value } : item,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Бейджи</span>
-                    <input
-                      value={product.badges_text}
-                      onChange={(event) =>
-                        setProducts((current) =>
-                          current.map((item, index) =>
-                            index === productIndex ? { ...item, badges_text: event.target.value } : item,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="field full">
-                    <span>Характеристики</span>
-                    <textarea
-                      rows={5}
-                      value={product.specs_text}
-                      onChange={(event) =>
-                        setProducts((current) =>
-                          current.map((item, index) =>
-                            index === productIndex ? { ...item, specs_text: event.target.value } : item,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                </div>
-                <div className="admin-media-column">
-                  <div className="admin-image-list">
-                    {product.images.map((imageUrl, imageIndex) => (
-                      <div key={imageUrl} className="admin-image-card">
-                        <img src={imageUrl} alt="" className="admin-preview" />
-                        <button
-                          className="button ghost"
-                          onClick={() => void removeProductImage(productIndex, imageIndex)}
-                        >
-                          Удалить фото
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  {product.images.length < 10 && (
-                    <label className="button ghost">
-                      Загрузить фото товара
-                      <input
-                        hidden
-                        type="file"
-                        accept="image/*"
-                        onChange={(event) => {
-                          const file = event.target.files?.[0]
-                          if (file) {
-                            void uploadProductImage(productIndex, file)
-                          }
-                        }}
-                      />
-                    </label>
-                  )}
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'posts' && (
-          <div className="admin-stack">
-            <div className="admin-grid">
-              <article className="admin-card">
-                <strong>Советы</strong>
-                <p>{postGroups.blog.length} материалов</p>
-              </article>
-              <article className="admin-card">
-                <strong>Новости и акции</strong>
-                <p>{postGroups.news.length} материалов</p>
-              </article>
-            </div>
-
-            {posts.map((post, index) => (
-              <article key={`${post.slug}-${index}`} className="admin-card">
-                <div className="admin-card-head">
-                  <strong>{post.title}</strong>
-                  <button className="button secondary" onClick={() => void savePost(post)}>
-                    Сохранить пост
-                  </button>
-                </div>
-                <div className="admin-form-grid">
-                  <label className="field">
-                    <span>Заголовок</span>
-                    <input
-                      value={post.title}
-                      onChange={(event) =>
-                        setPosts((current) =>
-                          current.map((item, itemIndex) =>
-                            itemIndex === index
-                              ? { ...item, title: event.target.value, slug: slugify(event.target.value) }
-                              : item,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Дата</span>
-                    <input
-                      value={post.date}
-                      onChange={(event) =>
-                        setPosts((current) =>
-                          current.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, date: event.target.value } : item,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Секция</span>
-                    <select
-                      value={post.section}
-                      onChange={(event) =>
-                        setPosts((current) =>
-                          current.map((item, itemIndex) =>
-                            itemIndex === index
-                              ? { ...item, section: event.target.value as 'news' | 'blog' }
-                              : item,
-                          ),
-                        )
-                      }
-                    >
-                      <option value="blog">Советы</option>
-                      <option value="news">Новости и акции</option>
-                    </select>
-                  </label>
-                  <label className="field">
-                    <span>Тип</span>
-                    <select
-                      value={post.kind}
-                      onChange={(event) =>
-                        setPosts((current) =>
-                          current.map((item, itemIndex) =>
-                            itemIndex === index
-                              ? { ...item, kind: event.target.value as StoryCard['kind'] }
-                              : item,
-                          ),
-                        )
-                      }
-                    >
-                      <option value="advice">Совет</option>
-                      <option value="news">Новость</option>
-                      <option value="offer">Акция</option>
-                    </select>
-                  </label>
-                  <label className="field full">
-                    <span>Краткое описание</span>
-                    <textarea
-                      rows={3}
-                      value={post.excerpt}
-                      onChange={(event) =>
-                        setPosts((current) =>
-                          current.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, excerpt: event.target.value } : item,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
+        {status && <div className="container"><p className="status-line">{status}</p></div>}
       </div>
-    </section>
+
+      {activeTab === 'editor' && (
+        <AdminVisualEditor
+          blocks={blocks}
+          products={products}
+          posts={posts}
+          onUpdateBlock={updateBlock}
+          onSaveBlock={saveBlock}
+          onUploadBlockImage={uploadBlockImage}
+          onUpdateProduct={updateProduct}
+          onSaveProduct={saveProduct}
+          onUploadProductImage={uploadProductImage}
+          onRemoveProductImage={removeProductImage}
+          onUpdatePost={updatePost}
+          onSavePost={savePost}
+        />
+      )}
+
+      {activeTab !== 'editor' && (
+        <section className="section container">
+          <div className="admin-shell">
+            {activeTab === 'overview' && (
+              <div className="admin-grid">
+                <article className="admin-card">
+                  <strong>Что уже подключено</strong>
+                  <p>Auth для входа в `/adminpanel`, товары, изображения товаров, посты и контентные блоки.</p>
+                </article>
+                <article className="admin-card">
+                  <strong>Что редактируется</strong>
+                  <p>Hero и баннеры через `content_blocks`, товары и их характеристики через `products` и `product_specs`.</p>
+                </article>
+                <article className="admin-card">
+                  <strong>Изображения</strong>
+                  <p>Медиа загружается в buckets `site-media` и `product-media`. Для товара можно держать до 10 фото.</p>
+                </article>
+              </div>
+            )}
+
+            {activeTab === 'blocks' && (
+              <div className="admin-stack">
+                {Object.values(blocks).map((block) => (
+                  <article key={block.key} className="admin-card">
+                    <div className="admin-card-head">
+                      <strong>{block.key}</strong>
+                      <button className="button secondary" onClick={() => void saveBlock(block)}>
+                        Сохранить блок
+                      </button>
+                    </div>
+                    <div className="admin-form-grid">
+                      <label className="field">
+                        <span>Eyebrow</span>
+                        <input
+                          value={block.eyebrow}
+                          onChange={(event) =>
+                            setBlocks((current) => ({
+                              ...current,
+                              [block.key]: { ...block, eyebrow: event.target.value },
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Заголовок</span>
+                        <input
+                          value={block.title}
+                          onChange={(event) =>
+                            setBlocks((current) => ({
+                              ...current,
+                              [block.key]: { ...block, title: event.target.value },
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="field full">
+                        <span>Текст</span>
+                        <textarea
+                          rows={4}
+                          value={block.text}
+                          onChange={(event) =>
+                            setBlocks((current) => ({
+                              ...current,
+                              [block.key]: { ...block, text: event.target.value },
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Кнопка</span>
+                        <input
+                          value={block.actionLabel}
+                          onChange={(event) =>
+                            setBlocks((current) => ({
+                              ...current,
+                              [block.key]: { ...block, actionLabel: event.target.value },
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Ссылка</span>
+                        <input
+                          value={block.actionTo}
+                          onChange={(event) =>
+                            setBlocks((current) => ({
+                              ...current,
+                              [block.key]: { ...block, actionTo: event.target.value },
+                            }))
+                          }
+                        />
+                      </label>
+                    </div>
+                    <div className="admin-media-row">
+                      {block.imageUrl ? <img src={block.imageUrl} alt="" className="admin-preview" /> : <div className="admin-preview placeholder">Нет изображения</div>}
+                      <div className="admin-actions">
+                        <label className="button ghost">
+                          Загрузить фото
+                          <input
+                            hidden
+                            type="file"
+                            accept="image/*"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0]
+                              if (file) {
+                                void uploadBlockImage(block.key, file)
+                              }
+                            }}
+                          />
+                        </label>
+                        {block.imageUrl && (
+                          <button
+                            className="button secondary"
+                            onClick={() =>
+                              setBlocks((current) => ({
+                                ...current,
+                                [block.key]: { ...block, imageUrl: null },
+                              }))
+                            }
+                          >
+                            Убрать фото
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+
+            {activeTab === 'products' && (
+              <div className="admin-stack">
+                <button
+                  className="button primary"
+                  onClick={() =>
+                    setProducts((current) => [
+                      {
+                        category_slug: categories[0].slug,
+                        slug: `new-${Date.now()}`,
+                        name: 'Новый товар',
+                        brand: '',
+                        price: '',
+                        stock_status: 'В наличии',
+                        stock_quantity: 0,
+                        short_text: '',
+                        description: '',
+                        season: '',
+                        fish: '',
+                        water: '',
+                        method: '',
+                        material: '',
+                        badges_text: '',
+                        accent: 'linear-gradient(135deg, #183a43 0%, #2d4a3e 42%, #e0b57b 100%)',
+                        specs_text: '',
+                        images: [],
+                        is_published: true,
+                      },
+                      ...current,
+                    ])
+                  }
+                >
+                  Добавить товар
+                </button>
+
+                {products.map((product, productIndex) => (
+                  <article key={`${product.slug}-${productIndex}`} className="admin-card">
+                    <div className="admin-card-head">
+                      <strong>{product.name || 'Новый товар'}</strong>
+                      <button className="button secondary" onClick={() => void saveProduct(product)}>
+                        Сохранить товар
+                      </button>
+                    </div>
+                    <div className="admin-form-grid">
+                      <label className="field">
+                        <span>Название</span>
+                        <input
+                          value={product.name}
+                          onChange={(event) =>
+                            setProducts((current) =>
+                              current.map((item, index) =>
+                                index === productIndex
+                                  ? {
+                                      ...item,
+                                      name: event.target.value,
+                                      slug: item.slug.startsWith('new-') ? slugify(event.target.value) : item.slug,
+                                    }
+                                  : item,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Slug</span>
+                        <input
+                          value={product.slug}
+                          onChange={(event) =>
+                            setProducts((current) =>
+                              current.map((item, index) =>
+                                index === productIndex ? { ...item, slug: slugify(event.target.value) } : item,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Категория</span>
+                        <select
+                          value={product.category_slug}
+                          onChange={(event) =>
+                            setProducts((current) =>
+                              current.map((item, index) =>
+                                index === productIndex ? { ...item, category_slug: event.target.value } : item,
+                              ),
+                            )
+                          }
+                        >
+                          {categories.map((category) => (
+                            <option key={category.slug} value={category.slug}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="field">
+                        <span>Бренд</span>
+                        <input
+                          value={product.brand}
+                          onChange={(event) =>
+                            setProducts((current) =>
+                              current.map((item, index) =>
+                                index === productIndex ? { ...item, brand: event.target.value } : item,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Цена</span>
+                        <input
+                          value={product.price}
+                          onChange={(event) =>
+                            setProducts((current) =>
+                              current.map((item, index) =>
+                                index === productIndex ? { ...item, price: event.target.value } : item,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Остаток</span>
+                        <input
+                          type="number"
+                          value={product.stock_quantity}
+                          onChange={(event) =>
+                            setProducts((current) =>
+                              current.map((item, index) =>
+                                index === productIndex
+                                  ? { ...item, stock_quantity: Number(event.target.value) || 0 }
+                                  : item,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="field full">
+                        <span>Короткий текст</span>
+                        <textarea
+                          rows={2}
+                          value={product.short_text}
+                          onChange={(event) =>
+                            setProducts((current) =>
+                              current.map((item, index) =>
+                                index === productIndex ? { ...item, short_text: event.target.value } : item,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="field full">
+                        <span>Описание</span>
+                        <textarea
+                          rows={4}
+                          value={product.description}
+                          onChange={(event) =>
+                            setProducts((current) =>
+                              current.map((item, index) =>
+                                index === productIndex ? { ...item, description: event.target.value } : item,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Рыба</span>
+                        <input
+                          value={product.fish}
+                          onChange={(event) =>
+                            setProducts((current) =>
+                              current.map((item, index) =>
+                                index === productIndex ? { ...item, fish: event.target.value } : item,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Способ ловли</span>
+                        <input
+                          value={product.method}
+                          onChange={(event) =>
+                            setProducts((current) =>
+                              current.map((item, index) =>
+                                index === productIndex ? { ...item, method: event.target.value } : item,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Бейджи</span>
+                        <input
+                          value={product.badges_text}
+                          onChange={(event) =>
+                            setProducts((current) =>
+                              current.map((item, index) =>
+                                index === productIndex ? { ...item, badges_text: event.target.value } : item,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="field full">
+                        <span>Характеристики</span>
+                        <textarea
+                          rows={5}
+                          value={product.specs_text}
+                          onChange={(event) =>
+                            setProducts((current) =>
+                              current.map((item, index) =>
+                                index === productIndex ? { ...item, specs_text: event.target.value } : item,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                    </div>
+                    <div className="admin-media-column">
+                      <div className="admin-image-list">
+                        {product.images.map((imageUrl, imageIndex) => (
+                          <div key={imageUrl} className="admin-image-card">
+                            <img src={imageUrl} alt="" className="admin-preview" />
+                            <button
+                              className="button ghost"
+                              onClick={() => void removeProductImage(productIndex, imageIndex)}
+                            >
+                              Удалить фото
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      {product.images.length < 10 && (
+                        <label className="button ghost">
+                          Загрузить фото товара
+                          <input
+                            hidden
+                            type="file"
+                            accept="image/*"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0]
+                              if (file) {
+                                void uploadProductImage(productIndex, file)
+                              }
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+
+            {activeTab === 'posts' && (
+              <div className="admin-stack">
+                <div className="admin-grid">
+                  <article className="admin-card">
+                    <strong>Советы</strong>
+                    <p>{postGroups.blog.length} материалов</p>
+                  </article>
+                  <article className="admin-card">
+                    <strong>Новости и акции</strong>
+                    <p>{postGroups.news.length} материалов</p>
+                  </article>
+                </div>
+
+                {posts.map((post, index) => (
+                  <article key={`${post.slug}-${index}`} className="admin-card">
+                    <div className="admin-card-head">
+                      <strong>{post.title}</strong>
+                      <button className="button secondary" onClick={() => void savePost(post)}>
+                        Сохранить пост
+                      </button>
+                    </div>
+                    <div className="admin-form-grid">
+                      <label className="field">
+                        <span>Заголовок</span>
+                        <input
+                          value={post.title}
+                          onChange={(event) =>
+                            setPosts((current) =>
+                              current.map((item, itemIndex) =>
+                                itemIndex === index
+                                  ? { ...item, title: event.target.value, slug: slugify(event.target.value) }
+                                  : item,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Дата</span>
+                        <input
+                          value={post.date}
+                          onChange={(event) =>
+                            setPosts((current) =>
+                              current.map((item, itemIndex) =>
+                                itemIndex === index ? { ...item, date: event.target.value } : item,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Секция</span>
+                        <select
+                          value={post.section}
+                          onChange={(event) =>
+                            setPosts((current) =>
+                              current.map((item, itemIndex) =>
+                                itemIndex === index
+                                  ? { ...item, section: event.target.value as 'news' | 'blog' }
+                                  : item,
+                              ),
+                            )
+                          }
+                        >
+                          <option value="blog">Советы</option>
+                          <option value="news">Новости и акции</option>
+                        </select>
+                      </label>
+                      <label className="field">
+                        <span>Тип</span>
+                        <select
+                          value={post.kind}
+                          onChange={(event) =>
+                            setPosts((current) =>
+                              current.map((item, itemIndex) =>
+                                itemIndex === index
+                                  ? { ...item, kind: event.target.value as StoryCard['kind'] }
+                                  : item,
+                              ),
+                            )
+                          }
+                        >
+                          <option value="advice">Совет</option>
+                          <option value="news">Новость</option>
+                          <option value="offer">Акция</option>
+                        </select>
+                      </label>
+                      <label className="field full">
+                        <span>Краткое описание</span>
+                        <textarea
+                          rows={3}
+                          value={post.excerpt}
+                          onChange={(event) =>
+                            setPosts((current) =>
+                              current.map((item, itemIndex) =>
+                                itemIndex === index ? { ...item, excerpt: event.target.value } : item,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+    </>
   )
 }
 

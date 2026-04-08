@@ -20,6 +20,7 @@ Then fill in:
 ```env
 VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+VITE_SUPABASE_CONTENT_ENABLED=true
 ```
 
 ## 2. Run SQL schema
@@ -75,6 +76,37 @@ After that, open:
 `/adminpanel`
 
 and sign in with the same email/password.
+
+## 3.1 Fix for `admin_profiles` / RLS if `/adminpanel` returns 500
+
+If the user exists but admin access check crashes with a `500`, run this patch once:
+
+```sql
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, auth
+as $$
+  select exists (
+    select 1
+    from public.admin_profiles ap
+    where ap.user_id = auth.uid()
+  );
+$$;
+
+grant execute on function public.is_admin() to anon, authenticated;
+
+drop policy if exists "admins can view admin profiles" on public.admin_profiles;
+drop policy if exists "admins and self can view admin profiles" on public.admin_profiles;
+
+create policy "admins and self can view admin profiles"
+on public.admin_profiles
+for select
+to authenticated
+using (user_id = auth.uid() or public.is_admin());
+```
 
 ## 4. What is editable in `/adminpanel`
 

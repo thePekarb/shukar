@@ -22,6 +22,8 @@ create or replace function public.is_admin()
 returns boolean
 language sql
 stable
+security definer
+set search_path = public, auth
 as $$
   select exists (
     select 1
@@ -29,6 +31,8 @@ as $$
     where ap.user_id = auth.uid()
   );
 $$;
+
+grant execute on function public.is_admin() to anon, authenticated;
 
 create table if not exists public.content_blocks (
   block_key text primary key,
@@ -143,11 +147,12 @@ alter table public.product_specs enable row level security;
 alter table public.product_images enable row level security;
 
 drop policy if exists "admins can view admin profiles" on public.admin_profiles;
-create policy "admins can view admin profiles"
+drop policy if exists "admins and self can view admin profiles" on public.admin_profiles;
+create policy "admins and self can view admin profiles"
 on public.admin_profiles
 for select
 to authenticated
-using (public.is_admin());
+using (user_id = auth.uid() or public.is_admin());
 
 drop policy if exists "admins can manage admin profiles" on public.admin_profiles;
 create policy "admins can manage admin profiles"

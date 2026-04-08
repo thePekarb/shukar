@@ -26,8 +26,15 @@ export function useCmsSnapshot() {
 
     void run()
 
+    const handleRefresh = () => {
+      void run()
+    }
+
+    window.addEventListener('cms:refresh', handleRefresh)
+
     return () => {
       ignore = true
+      window.removeEventListener('cms:refresh', handleRefresh)
     }
   }, [])
 

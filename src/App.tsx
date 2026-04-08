@@ -6,7 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
 } from 'react'
 import {
   Link,
@@ -28,7 +28,6 @@ import bannerGallery from './assets/Галерея.png'
 import bannerCatalog from './assets/Категории каталога.png'
 import bannerNews from './assets/Новости : акции.png'
 import karasIcon from './assets/icon/карась.svg'
-import cursorIconRaw from './assets/icon/курсор.svg?raw'
 import leshIcon from './assets/icon/лещ.svg'
 import sudakIcon from './assets/icon/судак.svg'
 import shukaIcon from './assets/icon/щука.svg'
@@ -57,11 +56,17 @@ const avitoLink =
 const routeLink =
   'https://yandex.ru/maps/?text=%D0%92%D0%BE%D0%BB%D0%B3%D0%BE%D0%B3%D1%80%D0%B0%D0%B4%2C%20%D0%A3%D0%BD%D0%B8%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%82%D0%B5%D1%82%D1%81%D0%BA%D0%B8%D0%B9%20%D0%BF%D1%80%D0%BE%D1%81%D0%BF%D0%B5%D0%BA%D1%82%2C%2082'
 const wishlistStorageKey = 'shukar-wishlist'
-const homeGallerySlides = [
+type GallerySlide = {
+  image: string
+  title: string
+  text: string
+}
+
+const gallerySlides: GallerySlide[] = [
   { image: heroPoster, title: 'Раннее утро у воды', text: 'Свет, глубина и настроение выезда.' },
-  { image: bannerCatalog, title: 'Категории и сценарии', text: 'Показываем ассортимент без шума.' },
-  { image: bannerAbout, title: 'Ассортимент вживую', text: 'Сравнивайте снасти и советуйтесь в магазине.' },
-  { image: bannerNews, title: 'Поступления и акции', text: 'Следите за полезными новостями сезона.' },
+  { image: bannerCatalog, title: 'Категории и сценарии', text: 'Показываем ассортимент без лишнего шума.' },
+  { image: bannerAbout, title: 'Ассортимент вживую', text: 'Сравнивайте снасти и советуйтесь прямо в магазине.' },
+  { image: bannerNews, title: 'Поступления и акции', text: 'Следите за новостями сезона и быстрым резервом.' },
   { image: bannerBlog, title: 'Советы и разборы', text: 'Короткие материалы для уверенного выбора.' },
   { image: bannerGallery, title: 'Атмосфера магазина', text: 'Реальные полки, детали и рабочие позиции.' },
 ]
@@ -156,10 +161,6 @@ function App() {
   const { snapshot } = useCmsSnapshot()
   const [wishlistIds, setWishlistIds] = useState<number[]>(() => loadWishlistIds())
   const [showScrollTop, setShowScrollTop] = useState(false)
-  const cursorIcon = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(cursorIconRaw)}`
-  const cursorStyle = {
-    '--cursor-url': `url(${cursorIcon}) 8 8, auto`,
-  } as CSSProperties
   const cmsProducts = snapshot.products.length ? snapshot.products : fallbackProducts
   const cmsArticles = snapshot.articles.length ? snapshot.articles : fallbackArticles
   const cmsNewsCards = snapshot.newsCards.length ? snapshot.newsCards : fallbackNewsCards
@@ -271,11 +272,10 @@ function App() {
   }
 
   return (
-    <div className="app-shell" style={cursorStyle} ref={shellRef}>
+    <div className="app-shell" ref={shellRef}>
       <video className="site-background-video" autoPlay muted loop playsInline preload="auto">
         <source src={backgroundVideo} type="video/mp4" />
       </video>
-      <DesktopCursor iconUrl={cursorIcon} />
       <SiteHeader wishlistCount={wishlistProducts.length} />
 
       <main className="page-wrap">
@@ -372,129 +372,6 @@ function AdminPanelFallback() {
         <p className="page-lead">Подтягиваем интерфейс управления сайтом и контентом.</p>
       </div>
     </section>
-  )
-}
-
-function DesktopCursor({ iconUrl }: { iconUrl: string }) {
-  const cursorRef = useRef<HTMLDivElement>(null)
-  const labelRef = useRef<HTMLSpanElement>(null)
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-
-    const mediaQuery = window.matchMedia('(hover: hover) and (pointer: fine)')
-    if (!mediaQuery.matches) {
-      return
-    }
-
-    document.body.classList.add('custom-cursor-enabled')
-    const cursorNode = cursorRef.current
-    const labelNode = labelRef.current
-    if (!cursorNode || !labelNode) {
-      return
-    }
-
-    let frameId = 0
-    let x = 0
-    let y = 0
-
-    const updatePosition = () => {
-      cursorNode.style.transform = `translate3d(${x}px, ${y}px, 0)`
-      frameId = 0
-    }
-
-    const setMode = (mode: 'default' | 'link' | 'photo' | 'button') => {
-      cursorNode.dataset.mode = mode
-      labelNode.textContent =
-        mode === 'photo' ? 'Фото' : mode === 'button' ? 'Нажать' : mode === 'link' ? 'Открыть' : ''
-    }
-
-    const handleMove = (event: PointerEvent) => {
-      x = event.clientX
-      y = event.clientY
-      if (!frameId) {
-        frameId = window.requestAnimationFrame(updatePosition)
-      }
-    }
-
-    const handleOver = (event: PointerEvent) => {
-      const target = event.target instanceof Element ? event.target : null
-      if (!target) {
-        setMode('default')
-        return
-      }
-
-      if (target.closest('input, textarea, select')) {
-        cursorNode.classList.remove('active', 'visible')
-        setMode('default')
-        return
-      }
-
-      if (target.closest('img, video, .product-card-image, .product-image')) {
-        cursorNode.classList.add('active', 'visible')
-        setMode('photo')
-        return
-      }
-
-      if (target.closest('button, .button, .wishlist-button')) {
-        cursorNode.classList.add('active', 'visible')
-        setMode('button')
-        return
-      }
-
-      if (
-        target.closest(
-          'a, .section-banner, .category-card, .product-card, .story-card, .gallery-card, .moment-card, .review-card, .info-card, .contact-card, .map-card',
-        )
-      ) {
-        cursorNode.classList.add('active', 'visible')
-        setMode('link')
-        return
-      }
-
-      cursorNode.classList.remove('active', 'visible')
-      setMode('default')
-    }
-
-    const handleLeave = () => {
-      cursorNode.classList.remove('visible', 'active', 'pressed')
-      setMode('default')
-    }
-
-    const handleDown = () => cursorNode.classList.add('pressed')
-    const handleUp = () => cursorNode.classList.remove('pressed')
-
-    window.addEventListener('pointermove', handleMove, { passive: true })
-    window.addEventListener('pointerover', handleOver, { passive: true })
-    window.addEventListener('pointerdown', handleDown)
-    window.addEventListener('pointerup', handleUp)
-    window.addEventListener('blur', handleLeave)
-    document.addEventListener('mouseleave', handleLeave)
-
-    return () => {
-      document.body.classList.remove('custom-cursor-enabled')
-      window.removeEventListener('pointermove', handleMove)
-      window.removeEventListener('pointerover', handleOver)
-      window.removeEventListener('pointerdown', handleDown)
-      window.removeEventListener('pointerup', handleUp)
-      window.removeEventListener('blur', handleLeave)
-      document.removeEventListener('mouseleave', handleLeave)
-      if (frameId) {
-        window.cancelAnimationFrame(frameId)
-      }
-    }
-  }, [])
-
-  return (
-    <div className="desktop-cursor" ref={cursorRef} aria-hidden="true">
-      <div className="desktop-cursor-core">
-        <span className="desktop-cursor-glow" />
-        <span className="desktop-cursor-bobber" style={{ backgroundImage: `url("${iconUrl}")` }} />
-      </div>
-      <span className="desktop-cursor-label" ref={labelRef} />
-    </div>
   )
 }
 
@@ -978,18 +855,7 @@ function HomePage({
           text="После отзывов удобно быстро пролистать реальные кадры, полки и настроение магазина перед визитом."
         />
 
-        <div className="gallery-carousel" data-reveal>
-          {homeGallerySlides.map((slide) => (
-            <article key={slide.title} className="gallery-slide">
-              <img src={slide.image} alt={slide.title} loading="lazy" />
-              <div className="gallery-slide-overlay" />
-              <div className="gallery-slide-caption">
-                <strong>{slide.title}</strong>
-                <span>{slide.text}</span>
-              </div>
-            </article>
-          ))}
-        </div>
+        <GalleryCarousel slides={gallerySlides} compact />
       </section>
     </>
   )
@@ -1561,12 +1427,18 @@ function GalleryPage({
         variant={banner.variant}
       />
 
+      <GalleryCarousel slides={gallerySlides} />
+
       <div className="gallery-grid">
-        {galleryMoments.map((item, index) => (
-          <article key={item} className="gallery-card" data-reveal>
+        {gallerySlides.map((item, index) => (
+          <article
+            key={item.title}
+            className="gallery-card gallery-summary-card"
+            data-reveal
+          >
             <span>Кадр {index + 1}</span>
-            <strong>{item}</strong>
-            <p>Именно такие детали создают доверие к офлайн-магазину еще до личного визита.</p>
+            <strong>{galleryMoments[index] ?? item.title}</strong>
+            <p>{item.text}</p>
           </article>
         ))}
       </div>
@@ -1803,6 +1675,258 @@ function ArticleDetailPage({
         </Link>
       </div>
     </section>
+  )
+}
+
+function GalleryCarousel({
+  slides,
+  compact = false,
+}: {
+  slides: GallerySlide[]
+  compact?: boolean
+}) {
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const pointerState = useRef({ active: false, startX: 0, deltaX: 0, moved: false })
+  const suppressClickRef = useRef(false)
+  const [index, setIndex] = useState(0)
+  const [dragOffset, setDragOffset] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+
+  const total = slides.length
+  const canNavigate = total > 1
+
+  useEffect(() => {
+    if (lightboxIndex === null) {
+      return
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setLightboxIndex(null)
+      }
+
+      if (event.key === 'ArrowRight' && total > 1) {
+        setLightboxIndex((current) => ((current ?? 0) + 1) % total)
+      }
+
+      if (event.key === 'ArrowLeft' && total > 1) {
+        setLightboxIndex((current) => ((current ?? 0) - 1 + total) % total)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [lightboxIndex, total])
+
+  const moveTo = (nextIndex: number) => {
+    if (!total) {
+      return
+    }
+
+    const bounded = (nextIndex + total) % total
+    setIndex(bounded)
+  }
+
+  const completeDrag = () => {
+    if (!pointerState.current.active) {
+      return
+    }
+
+    const viewportWidth = viewportRef.current?.offsetWidth ?? 0
+    const threshold = Math.max(60, viewportWidth * 0.14)
+    const travelled = pointerState.current.deltaX
+    suppressClickRef.current = pointerState.current.moved
+
+    if (Math.abs(travelled) > threshold && canNavigate) {
+      moveTo(index + (travelled < 0 ? 1 : -1))
+    }
+
+    pointerState.current = { active: false, startX: 0, deltaX: 0, moved: false }
+    setDragOffset(0)
+    setIsDragging(false)
+  }
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!canNavigate) {
+      return
+    }
+
+    pointerState.current = {
+      active: true,
+      startX: event.clientX,
+      deltaX: 0,
+      moved: false,
+    }
+    setIsDragging(true)
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!pointerState.current.active) {
+      return
+    }
+
+    const deltaX = event.clientX - pointerState.current.startX
+    pointerState.current.deltaX = deltaX
+    pointerState.current.moved = Math.abs(deltaX) > 6
+    setDragOffset(deltaX)
+  }
+
+  const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (pointerState.current.active) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    completeDrag()
+  }
+
+  const handleSlideClick = (slideIndex: number) => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false
+      return
+    }
+
+    setLightboxIndex(slideIndex)
+  }
+
+  return (
+    <>
+      <div className={compact ? 'gallery-carousel-shell compact' : 'gallery-carousel-shell'} data-reveal>
+        <div className="gallery-carousel-head">
+          <div className="gallery-carousel-meta">
+            <span>{index + 1} / {total}</span>
+          </div>
+
+          <div className="gallery-carousel-controls">
+            <button
+              type="button"
+              className="gallery-arrow"
+              aria-label="Предыдущий слайд"
+              onClick={() => moveTo(index - 1)}
+              disabled={!canNavigate}
+            >
+              ←
+            </button>
+            <button
+              type="button"
+              className="gallery-arrow"
+              aria-label="Следующий слайд"
+              onClick={() => moveTo(index + 1)}
+              disabled={!canNavigate}
+            >
+              →
+            </button>
+          </div>
+        </div>
+
+        <div
+          className="gallery-viewport"
+          ref={viewportRef}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={completeDrag}
+          onPointerLeave={() => {
+            if (pointerState.current.active) {
+              completeDrag()
+            }
+          }}
+        >
+          <div
+            className="gallery-track"
+            style={{
+              transform: `translate3d(calc(${-index * 100}% + ${dragOffset}px), 0, 0)`,
+              transition: isDragging ? 'none' : undefined,
+            }}
+          >
+            {slides.map((slide, slideIndex) => (
+              <button
+                key={`${slide.title}-${slideIndex}`}
+                type="button"
+                className="gallery-slide"
+                onClick={() => handleSlideClick(slideIndex)}
+              >
+                <img src={slide.image} alt={slide.title} loading="lazy" />
+                <div className="gallery-slide-overlay" />
+                <div className="gallery-slide-caption">
+                  <strong>{slide.title}</strong>
+                  <span>{slide.text}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {!compact && (
+          <div className="gallery-dots">
+            {slides.map((slide, slideIndex) => (
+              <button
+                key={`${slide.title}-dot`}
+                type="button"
+                className={slideIndex === index ? 'gallery-dot active' : 'gallery-dot'}
+                aria-label={`Перейти к слайду ${slideIndex + 1}`}
+                onClick={() => moveTo(slideIndex)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {lightboxIndex !== null && (
+        <div
+          className="gallery-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Просмотр изображения"
+          onClick={() => setLightboxIndex(null)}
+        >
+          <div className="gallery-lightbox-inner" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              className="gallery-lightbox-close"
+              aria-label="Закрыть"
+              onClick={() => setLightboxIndex(null)}
+            >
+              ×
+            </button>
+
+            {canNavigate && (
+              <button
+                type="button"
+                className="gallery-lightbox-arrow prev"
+                aria-label="Предыдущее изображение"
+                onClick={() => setLightboxIndex((current) => ((current ?? 0) - 1 + total) % total)}
+              >
+                ←
+              </button>
+            )}
+
+            <figure className="gallery-lightbox-figure">
+              <img
+                src={slides[lightboxIndex].image}
+                alt={slides[lightboxIndex].title}
+                className="gallery-lightbox-image"
+              />
+              <figcaption className="gallery-lightbox-caption">
+                <strong>{slides[lightboxIndex].title}</strong>
+                <span>{slides[lightboxIndex].text}</span>
+              </figcaption>
+            </figure>
+
+            {canNavigate && (
+              <button
+                type="button"
+                className="gallery-lightbox-arrow next"
+                aria-label="Следующее изображение"
+                onClick={() => setLightboxIndex((current) => ((current ?? 0) + 1) % total)}
+              >
+                →
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 

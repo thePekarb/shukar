@@ -113,6 +113,10 @@ function makeUploadPath(folder: string, slug: string, file: File) {
   return `${folder}/${slug}/${file.lastModified || 'file'}-${safeName}`
 }
 
+function notifyCmsRefresh() {
+  window.dispatchEvent(new Event('cms:refresh'))
+}
+
 export function AdminPanel({ isSupabaseConfigured, routeLink }: AdminPanelProps) {
   const supabase = getSupabaseBrowserClient()
   const [session, setSession] = useState<Session | null>(null)
@@ -121,13 +125,14 @@ export function AdminPanel({ isSupabaseConfigured, routeLink }: AdminPanelProps)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [authError, setAuthError] = useState('')
+  const [adminCheckError, setAdminCheckError] = useState('')
   const [blocks, setBlocks] = useState<Record<string, ContentBlock>>(defaultBlocks)
   const [products, setProducts] = useState<AdminProduct[]>(() => fallbackProducts.map(productToAdmin))
   const [posts, setPosts] = useState<AdminPost[]>(() => [
     ...fallbackArticles.map((item) => storyToAdmin(item, 'blog')),
     ...fallbackNewsCards.map((item) => storyToAdmin(item, 'news')),
   ])
-  const [activeTab, setActiveTab] = useState<'overview' | 'blocks' | 'products' | 'posts'>('overview')
+  const [activeTab, setActiveTab] = useState<'editor' | 'overview' | 'blocks' | 'products' | 'posts'>('editor')
   const [status, setStatus] = useState('')
 
   const postGroups = useMemo(
@@ -138,18 +143,46 @@ export function AdminPanel({ isSupabaseConfigured, routeLink }: AdminPanelProps)
     [posts],
   )
 
+  const updateBlock = useCallback((blockKey: string, patch: Partial<ContentBlock>) => {
+    setBlocks((current) => ({
+      ...current,
+      [blockKey]: { ...current[blockKey], ...patch },
+    }))
+  }, [])
+
+  const updateProduct = useCallback((index: number, patch: Partial<AdminProduct>) => {
+    setProducts((current) =>
+      current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)),
+    )
+  }, [])
+
+  const updatePost = useCallback((index: number, patch: Partial<AdminPost>) => {
+    setPosts((current) =>
+      current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)),
+    )
+  }, [])
+
   const verifyAdmin = useCallback(
     async (userId: string) => {
       if (!supabase) {
         return false
       }
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('admin_profiles')
         .select('user_id')
         .eq('user_id', userId)
         .maybeSingle()
 
+      if (error) {
+        setAdminCheckError(
+          'Не удалось проверить права администратора. Обычно это значит, что в Supabase не применен SQL fix для admin_profiles и RLS.',
+        )
+        setIsAdmin(false)
+        return false
+      }
+
+      setAdminCheckError('')
       const hasAdminAccess = Boolean(data)
       setIsAdmin(hasAdminAccess)
       return hasAdminAccess
@@ -277,6 +310,7 @@ export function AdminPanel({ isSupabaseConfigured, routeLink }: AdminPanelProps)
     }
 
     setAuthError('')
+    setAdminCheckError('')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
@@ -309,6 +343,9 @@ export function AdminPanel({ isSupabaseConfigured, routeLink }: AdminPanelProps)
     })
 
     setStatus(error ? error.message : `Блок ${block.key} сохранен.`)
+    if (!error) {
+      notifyCmsRefresh()
+    }
   }
 
   async function uploadBlockImage(blockKey: string, file: File) {
@@ -327,6 +364,7 @@ export function AdminPanel({ isSupabaseConfigured, routeLink }: AdminPanelProps)
     }
 
     const { data } = supabase.storage.from('site-media').getPublicUrl(path)
+    await supabase.from('content_blocks').update({ image_url: data.publicUrl }).eq('block_key', blockKey)
     setBlocks((current) => ({
       ...current,
       [blockKey]: {
@@ -334,7 +372,8 @@ export function AdminPanel({ isSupabaseConfigured, routeLink }: AdminPanelProps)
         imageUrl: data.publicUrl,
       },
     }))
-    setStatus('Изображение блока загружено. Нажмите «Сохранить блок».')
+    setStatus('Изображение блока загружено.')
+    notifyCmsRefresh()
   }
 
   async function saveProduct(product: AdminProduct) {
@@ -399,6 +438,7 @@ export function AdminPanel({ isSupabaseConfigured, routeLink }: AdminPanelProps)
       current.map((item) => (item === product ? { ...product, id: productId } : item)),
     )
     setStatus(`Товар «${product.name}» сохранен.`)
+    notifyCmsRefresh()
   }
 
   async function uploadProductImage(productIndex: number, file: File) {
@@ -431,6 +471,7 @@ export function AdminPanel({ isSupabaseConfigured, routeLink }: AdminPanelProps)
     }
 
     setStatus('Фото товара загружено.')
+    notifyCmsRefresh()
   }
 
   async function removeProductImage(productIndex: number, imageIndex: number) {
@@ -457,6 +498,8 @@ export function AdminPanel({ isSupabaseConfigured, routeLink }: AdminPanelProps)
     if (storagePath) {
       await supabase.storage.from('product-media').remove([storagePath])
     }
+
+    notifyCmsRefresh()
   }
 
   async function savePost(post: AdminPost) {
@@ -478,6 +521,9 @@ export function AdminPanel({ isSupabaseConfigured, routeLink }: AdminPanelProps)
     )
 
     setStatus(error ? error.message : `Пост «${post.title}» сохранен.`)
+    if (!error) {
+      notifyCmsRefresh()
+    }
   }
 
   if (!isSupabaseConfigured) {
@@ -541,6 +587,7 @@ export function AdminPanel({ isSupabaseConfigured, routeLink }: AdminPanelProps)
         <div className="admin-shell">
           <h1 className="page-title">Доступ ограничен</h1>
           <p className="page-lead">Аккаунт вошел в систему, но не найден в таблице `admin_profiles`.</p>
+          {adminCheckError && <p className="status-line">{adminCheckError}</p>}
           <button className="button secondary" onClick={() => void handleSignOut()}>
             Выйти
           </button>
@@ -569,6 +616,7 @@ export function AdminPanel({ isSupabaseConfigured, routeLink }: AdminPanelProps)
 
         <div className="admin-tabs">
           {[
+            ['editor', 'Визуальный режим'],
             ['overview', 'Обзор'],
             ['blocks', 'Блоки'],
             ['products', 'Товары'],
@@ -585,6 +633,23 @@ export function AdminPanel({ isSupabaseConfigured, routeLink }: AdminPanelProps)
         </div>
 
         {status && <p className="status-line">{status}</p>}
+
+        {activeTab === 'editor' && (
+          <AdminVisualEditor
+            blocks={blocks}
+            products={products}
+            posts={posts}
+            onUpdateBlock={updateBlock}
+            onSaveBlock={saveBlock}
+            onUploadBlockImage={uploadBlockImage}
+            onUpdateProduct={updateProduct}
+            onSaveProduct={saveProduct}
+            onUploadProductImage={uploadProductImage}
+            onRemoveProductImage={removeProductImage}
+            onUpdatePost={updatePost}
+            onSavePost={savePost}
+          />
+        )}
 
         {activeTab === 'overview' && (
           <div className="admin-grid">
@@ -1075,5 +1140,390 @@ export function AdminPanel({ isSupabaseConfigured, routeLink }: AdminPanelProps)
         )}
       </div>
     </section>
+  )
+}
+
+function AdminVisualEditor({
+  blocks,
+  products,
+  posts,
+  onUpdateBlock,
+  onSaveBlock,
+  onUploadBlockImage,
+  onUpdateProduct,
+  onSaveProduct,
+  onUploadProductImage,
+  onRemoveProductImage,
+  onUpdatePost,
+  onSavePost,
+}: {
+  blocks: Record<string, ContentBlock>
+  products: AdminProduct[]
+  posts: AdminPost[]
+  onUpdateBlock: (blockKey: string, patch: Partial<ContentBlock>) => void
+  onSaveBlock: (block: ContentBlock) => Promise<void>
+  onUploadBlockImage: (blockKey: string, file: File) => Promise<void>
+  onUpdateProduct: (index: number, patch: Partial<AdminProduct>) => void
+  onSaveProduct: (product: AdminProduct) => Promise<void>
+  onUploadProductImage: (index: number, file: File) => Promise<void>
+  onRemoveProductImage: (index: number, imageIndex: number) => Promise<void>
+  onUpdatePost: (index: number, patch: Partial<AdminPost>) => void
+  onSavePost: (post: AdminPost) => Promise<void>
+}) {
+  const orderedBlockKeys = [
+    'hero_home',
+    'catalog_banner',
+    'about_banner',
+    'news_banner',
+    'blog_banner',
+    'gallery_banner',
+  ]
+
+  return (
+    <div className="admin-visual-editor">
+      <div className="page-intro">
+        <p className="eyebrow">Редактирование витрины</p>
+        <h1 className="page-title">Сайт в режиме редактирования</h1>
+        <p className="page-lead">
+          Здесь шапка, футер и навигация остаются как у сайта, а редактируемые тексты и изображения
+          получают аккуратные inline-контролы без перехода в отдельную «глухую» админку.
+        </p>
+      </div>
+
+      <div className="admin-visual-stack">
+        {orderedBlockKeys.map((blockKey) => {
+          const block = blocks[blockKey]
+          if (!block) {
+            return null
+          }
+
+          const variantClass = block.variant !== 'default' ? `${block.variant}-variant` : ''
+
+          return (
+            <article key={block.key} className={`section-banner admin-visual-block ${variantClass}`}>
+              {block.imageUrl ? (
+                <img src={block.imageUrl} alt="" />
+              ) : (
+                <div className="admin-banner-placeholder">Нет изображения</div>
+              )}
+              <div className="banner-overlay" />
+              <div className="banner-content admin-banner-content">
+                <InlineEditableField
+                  value={block.eyebrow}
+                  onSave={async (value) => {
+                    onUpdateBlock(block.key, { eyebrow: value })
+                    await onSaveBlock({ ...block, eyebrow: value })
+                  }}
+                  placeholder="Eyebrow"
+                  displayClassName="eyebrow"
+                />
+                <InlineEditableField
+                  value={block.title}
+                  onSave={async (value) => {
+                    onUpdateBlock(block.key, { title: value })
+                    await onSaveBlock({ ...block, title: value })
+                  }}
+                  placeholder="Заголовок"
+                  multiline
+                  displayClassName="admin-inline-title"
+                />
+                <InlineEditableField
+                  value={block.text}
+                  onSave={async (value) => {
+                    onUpdateBlock(block.key, { text: value })
+                    await onSaveBlock({ ...block, text: value })
+                  }}
+                  placeholder="Текст секции"
+                  multiline
+                  displayClassName="admin-inline-body"
+                />
+                <InlineEditableField
+                  value={block.actionLabel}
+                  onSave={async (value) => {
+                    onUpdateBlock(block.key, { actionLabel: value })
+                    await onSaveBlock({ ...block, actionLabel: value })
+                  }}
+                  placeholder="Подпись кнопки"
+                  displayClassName="admin-inline-link"
+                />
+              </div>
+
+              <div className="admin-block-toolbar">
+                <label className="inline-icon-button">
+                  <span>＋</span>
+                  <input
+                    hidden
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0]
+                      if (file) {
+                        void onUploadBlockImage(block.key, file)
+                      }
+                    }}
+                  />
+                </label>
+                {block.imageUrl && (
+                  <button
+                    type="button"
+                    className="inline-icon-button danger"
+                    onClick={() => {
+                      onUpdateBlock(block.key, { imageUrl: null })
+                      void onSaveBlock({ ...block, imageUrl: null })
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
+                <button type="button" className="button secondary" onClick={() => void onSaveBlock(block)}>
+                  Сохранить секцию
+                </button>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+
+      <section className="section-heading">
+        <p className="eyebrow">Новости и советы</p>
+        <h2>Карточки контента вживую</h2>
+        <p>Редактирование работает прямо на карточках: меняйте заголовок, дату и текст, а затем сохраняйте без перезагрузки.</p>
+      </section>
+
+      <div className="story-grid three-columns">
+        {posts.map((post, index) => (
+          <article
+            key={`${post.slug}-${index}`}
+            className={`story-card ${post.kind === 'advice' ? 'advice-card' : post.kind === 'offer' ? 'offer-card' : 'news-card'} admin-story-editor`}
+          >
+            <div className="story-meta">
+              <InlineEditableField
+                value={post.kind === 'advice' ? 'Совет' : post.kind === 'offer' ? 'Акция' : 'Новость'}
+                onSave={async (value) => {
+                  const nextKind =
+                    value.toLowerCase().includes('совет')
+                      ? 'advice'
+                      : value.toLowerCase().includes('акц')
+                        ? 'offer'
+                        : 'news'
+                  onUpdatePost(index, { kind: nextKind })
+                  await onSavePost({ ...post, kind: nextKind })
+                }}
+                placeholder="Тип"
+                displayClassName="admin-inline-meta"
+              />
+              <InlineEditableField
+                value={post.date}
+                onSave={async (value) => {
+                  onUpdatePost(index, { date: value })
+                  await onSavePost({ ...post, date: value })
+                }}
+                placeholder="Дата"
+                displayClassName="admin-inline-meta admin-inline-time"
+              />
+            </div>
+            <InlineEditableField
+              value={post.title}
+              onSave={async (value) => {
+                const slug = slugify(value)
+                onUpdatePost(index, { title: value, slug })
+                await onSavePost({ ...post, title: value, slug })
+              }}
+              placeholder="Заголовок"
+              multiline
+              displayClassName="admin-inline-strong"
+            />
+            <InlineEditableField
+              value={post.excerpt}
+              onSave={async (value) => {
+                onUpdatePost(index, { excerpt: value })
+                await onSavePost({ ...post, excerpt: value })
+              }}
+              placeholder="Краткое описание"
+              multiline
+              displayClassName="admin-inline-body"
+            />
+
+            <div className="admin-card-toolbar">
+              <button type="button" className="button secondary" onClick={() => void onSavePost(post)}>
+                Сохранить карточку
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <section className="section-heading">
+        <p className="eyebrow">Товары</p>
+        <h2>Карточки каталога в режиме редактирования</h2>
+        <p>Меняйте ключевые поля прямо на карточке. Фото можно добавлять и удалять здесь же, не выходя из визуального режима.</p>
+      </section>
+
+      <div className="product-grid admin-product-grid">
+        {products.map((product, index) => (
+          <article key={`${product.slug}-${index}`} className="product-card admin-product-editor">
+            <div className="product-cover" style={{ background: product.accent }}>
+              {product.images[0] ? (
+                <img src={product.images[0]} alt={product.name} className="product-card-image" />
+              ) : (
+                <div className="admin-product-placeholder">Нет фото</div>
+              )}
+              <span>{product.brand || 'Бренд'}</span>
+              <strong>{categories.find((category) => category.slug === product.category_slug)?.name ?? 'Категория'}</strong>
+            </div>
+
+            <div className="product-body admin-product-body">
+              <InlineEditableField
+                value={product.price}
+                onSave={async (value) => {
+                  onUpdateProduct(index, { price: value })
+                  await onSaveProduct({ ...product, price: value })
+                }}
+                placeholder="Цена"
+                displayClassName="admin-inline-price"
+              />
+              <InlineEditableField
+                value={product.name}
+                onSave={async (value) => {
+                  const slug = slugify(value)
+                  onUpdateProduct(index, { name: value, slug })
+                  await onSaveProduct({ ...product, name: value, slug })
+                }}
+                placeholder="Название"
+                multiline
+                displayClassName="admin-inline-strong"
+              />
+              <InlineEditableField
+                value={product.short_text}
+                onSave={async (value) => {
+                  onUpdateProduct(index, { short_text: value })
+                  await onSaveProduct({ ...product, short_text: value })
+                }}
+                placeholder="Краткий текст"
+                multiline
+                displayClassName="admin-inline-body"
+              />
+
+              <div className="admin-image-strip">
+                {product.images.map((imageUrl, imageIndex) => (
+                  <div key={`${imageUrl}-${imageIndex}`} className="admin-image-chip">
+                    <img src={imageUrl} alt="" />
+                    <button
+                      type="button"
+                      className="inline-icon-button danger"
+                      onClick={() => void onRemoveProductImage(index, imageIndex)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+
+                {product.images.length < 10 && (
+                  <label className="admin-image-add">
+                    <span>＋</span>
+                    <input
+                      hidden
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0]
+                        if (file) {
+                          void onUploadProductImage(index, file)
+                        }
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+
+              <div className="admin-card-toolbar">
+                <button type="button" className="button secondary" onClick={() => void onSaveProduct(product)}>
+                  Сохранить товар
+                </button>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function InlineEditableField({
+  value,
+  onSave,
+  placeholder,
+  multiline = false,
+  displayClassName,
+}: {
+  value: string
+  onSave: (value: string) => void | Promise<void>
+  placeholder: string
+  multiline?: boolean
+  displayClassName?: string
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!editing) {
+      setDraft(value)
+    }
+  }, [editing, value])
+
+  return (
+    <div className="inline-editable">
+      {!editing ? (
+        <div className="inline-editable-display">
+          <div className={displayClassName}>{value || placeholder}</div>
+          <button
+            type="button"
+            className="inline-icon-button"
+            aria-label={`Редактировать ${placeholder}`}
+            onClick={() => setEditing(true)}
+          >
+            ✎
+          </button>
+        </div>
+      ) : (
+        <div className="inline-editable-form">
+          {multiline ? (
+            <textarea value={draft} rows={4} onChange={(event) => setDraft(event.target.value)} />
+          ) : (
+            <input value={draft} onChange={(event) => setDraft(event.target.value)} />
+          )}
+          <div className="inline-editable-actions">
+            <button
+              type="button"
+              className="button secondary"
+              disabled={saving}
+              onClick={async () => {
+                setSaving(true)
+                try {
+                  await onSave(draft)
+                  setEditing(false)
+                } finally {
+                  setSaving(false)
+                }
+              }}
+            >
+              {saving ? 'Сохраняем...' : 'Сохранить'}
+            </button>
+            <button
+              type="button"
+              className="button ghost"
+              disabled={saving}
+              onClick={() => {
+                setDraft(value)
+                setEditing(false)
+              }}
+            >
+              Отмена
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

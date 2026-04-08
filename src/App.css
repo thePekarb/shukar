@@ -701,6 +701,62 @@ body.custom-cursor-enabled .app-shell video {
   color: var(--color-sun);
 }
 
+.gallery-carousel {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(280px, 34%);
+  gap: 18px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scroll-snap-type: x proximity;
+}
+
+.gallery-slide {
+  position: relative;
+  min-height: 360px;
+  border-radius: 28px;
+  overflow: hidden;
+  scroll-snap-align: start;
+  border: 1px solid rgba(235, 238, 232, 0.08);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.24);
+}
+
+.gallery-slide img,
+.gallery-slide-overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.gallery-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gallery-slide-overlay {
+  background:
+    linear-gradient(180deg, rgba(7, 18, 22, 0.08) 0%, rgba(7, 18, 22, 0.72) 100%),
+    linear-gradient(90deg, rgba(7, 18, 22, 0.74) 0%, rgba(7, 18, 22, 0.14) 100%);
+}
+
+.gallery-slide-caption {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 20px;
+  display: grid;
+  gap: 8px;
+  z-index: 2;
+}
+
+.gallery-slide-caption strong {
+  color: #fff8ef;
+}
+
+.gallery-slide-caption span {
+  color: rgba(255, 249, 241, 0.82);
+}
+
 .category-grid,
 .product-grid,
 .review-grid,
@@ -1628,11 +1684,28 @@ body.custom-cursor-enabled .app-shell video {
     left: 20px;
     bottom: 20px;
     width: calc(100% - 40px);
-    padding: 16px;
+    gap: 12px;
+    padding: 14px;
   }
 
   .hero-video-wrap {
     min-height: 480px;
+  }
+
+  .hero-copy {
+    display: none;
+  }
+
+  .hero-content .action-row {
+    display: grid;
+    gap: 10px;
+  }
+
+  .hero-content .button,
+  .hero-pills span,
+  .hero-pills .address-pill {
+    width: 100%;
+    justify-content: center;
   }
 
   .app-shell::before {
@@ -1652,13 +1725,15 @@ body.custom-cursor-enabled .app-shell video {
   }
 
   .banner-content h2 {
-    max-width: 8.6ch;
-    font-size: clamp(1.7rem, 8vw, 2.7rem);
+    max-width: 6.3ch;
+    font-size: clamp(1.46rem, 8.1vw, 2.2rem);
+    line-height: 0.92;
   }
 
   .banner-content span {
-    max-width: 28ch;
-    font-size: 0.95rem;
+    max-width: 19ch;
+    font-size: 0.82rem;
+    line-height: 1.45;
   }
 
   .category-grid,
@@ -1675,7 +1750,15 @@ body.custom-cursor-enabled .app-shell video {
   .banner-content {
     left: 20px;
     bottom: 20px;
-    width: calc(100% - 40px);
+    width: min(230px, calc(100% - 40px));
+  }
+
+  .section-banner {
+    min-height: 420px;
+  }
+
+  .gallery-carousel {
+    grid-auto-columns: minmax(240px, 82%);
   }
 
   .filter-top,

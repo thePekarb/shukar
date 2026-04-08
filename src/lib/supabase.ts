@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+export const isSupabaseContentEnabled = import.meta.env.VITE_SUPABASE_CONTENT_ENABLED === 'true'
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 

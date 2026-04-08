@@ -6,7 +6,7 @@ import {
   type Product,
   type StoryCard,
 } from '../store'
-import { getSupabaseBrowserClient } from './supabase'
+import { getSupabaseBrowserClient, isSupabaseContentEnabled } from './supabase'
 
 export type ContentBlock = {
   key: string
@@ -86,8 +86,8 @@ export const defaultBlocks: Record<string, ContentBlock> = {
   catalog_banner: {
     key: 'catalog_banner',
     eyebrow: 'Каталог',
-    title: 'Подберите снасти под свой стиль ловли, а не по случайным карточкам',
-    text: 'Категории сделаны как для покупателя: можно быстро пойти в спиннинги, катушки, приманки, экипировку или сразу собрать удобный wishlist.',
+    title: 'Свой стиль ловли, а не случайные карточки',
+    text: 'Быстро переходите в нужные категории и собирайте удобный список перед визитом.',
     actionLabel: 'Открыть каталог',
     actionTo: '/catalog',
     imageUrl: null,
@@ -97,8 +97,8 @@ export const defaultBlocks: Record<string, ContentBlock> = {
   news_banner: {
     key: 'news_banner',
     eyebrow: 'Новости и акции',
-    title: 'Следите за поступлениями, полезными офферами и быстрым резервом',
-    text: 'Смотрите, что приехало к сезону, какие позиции сейчас выгоднее взять и что можно быстро отложить перед визитом.',
+    title: 'Следите за поступлениями, акциями и быстрым резервом',
+    text: 'Смотрите, что уже приехало к сезону и что удобно отложить перед визитом.',
     actionLabel: 'Все новости и акции',
     actionTo: '/news',
     imageUrl: null,
@@ -108,8 +108,8 @@ export const defaultBlocks: Record<string, ContentBlock> = {
   blog_banner: {
     key: 'blog_banner',
     eyebrow: 'Советы',
-    title: 'Если не хочется ошибиться с покупкой, начните с коротких и понятных разборов',
-    text: 'Материалы написаны так, чтобы покупателю было проще выбрать снасть, катушку или приманку под реальный сценарий.',
+    title: 'Начните с коротких и понятных разборов',
+    text: 'Подборки и советы помогают быстрее выбрать снасть под реальный сценарий.',
     actionLabel: 'Открыть советы',
     actionTo: '/blog',
     imageUrl: null,
@@ -130,8 +130,8 @@ export const defaultBlocks: Record<string, ContentBlock> = {
   about_banner: {
     key: 'about_banner',
     eyebrow: 'О магазине',
-    title: 'ЩУКАРЬ — это магазин, где ассортимент и консультация работают вместе',
-    text: 'Сюда удобно приехать, если нужно не просто купить снасть, а спокойно сравнить варианты, уточнить наличие и получить понятный совет.',
+    title: 'Ассортимент и консультация работают вместе',
+    text: 'Сравните варианты, уточните наличие и получите понятный совет прямо в магазине.',
     actionLabel: 'Связаться с магазином',
     actionTo: '',
     imageUrl: null,
@@ -203,6 +203,10 @@ function normalizeBlock(row: BlockRow): ContentBlock {
 }
 
 export async function fetchCmsSnapshot(): Promise<CmsSnapshot> {
+  if (!isSupabaseContentEnabled) {
+    return getFallbackSnapshot()
+  }
+
   const supabase = getSupabaseBrowserClient()
 
   if (!supabase) {

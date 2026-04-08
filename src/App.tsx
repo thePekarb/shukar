@@ -57,6 +57,14 @@ const avitoLink =
 const routeLink =
   'https://yandex.ru/maps/?text=%D0%92%D0%BE%D0%BB%D0%B3%D0%BE%D0%B3%D1%80%D0%B0%D0%B4%2C%20%D0%A3%D0%BD%D0%B8%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%82%D0%B5%D1%82%D1%81%D0%BA%D0%B8%D0%B9%20%D0%BF%D1%80%D0%BE%D1%81%D0%BF%D0%B5%D0%BA%D1%82%2C%2082'
 const wishlistStorageKey = 'shukar-wishlist'
+const homeGallerySlides = [
+  { image: heroPoster, title: 'Раннее утро у воды', text: 'Свет, глубина и настроение выезда.' },
+  { image: bannerCatalog, title: 'Категории и сценарии', text: 'Показываем ассортимент без шума.' },
+  { image: bannerAbout, title: 'Ассортимент вживую', text: 'Сравнивайте снасти и советуйтесь в магазине.' },
+  { image: bannerNews, title: 'Поступления и акции', text: 'Следите за полезными новостями сезона.' },
+  { image: bannerBlog, title: 'Советы и разборы', text: 'Короткие материалы для уверенного выбора.' },
+  { image: bannerGallery, title: 'Атмосфера магазина', text: 'Реальные полки, детали и рабочие позиции.' },
+]
 const LazyAdminPanel = lazy(async () => ({ default: (await import('./admin/AdminPanel')).AdminPanel }))
 
 function resolveBlock(
@@ -709,23 +717,23 @@ function HomePage({
   })
   const catalogBanner = resolveBlock(blocks, 'catalog_banner', {
     eyebrow: 'Каталог',
-    title: 'Подберите снасти под свой стиль ловли, а не по случайным карточкам',
-    text: 'Категории сделаны как для покупателя: можно быстро пойти в спиннинги, катушки, приманки, экипировку или сразу собрать удобный wishlist.',
+    title: 'Свой стиль ловли, а не случайные карточки',
+    text: 'Быстро переходите в нужные категории и собирайте удобный список перед визитом.',
     actionLabel: 'Открыть каталог',
     actionTo: '/catalog',
   })
   const newsBanner = resolveBlock(blocks, 'news_banner', {
     eyebrow: 'Новости и акции',
-    title: 'Следите за поступлениями, полезными офферами и быстрым резервом',
-    text: 'Смотрите, что приехало к сезону, какие позиции сейчас выгоднее взять и что можно быстро отложить перед визитом.',
+    title: 'Следите за поступлениями, акциями и быстрым резервом',
+    text: 'Смотрите, что уже приехало к сезону и что удобно отложить перед визитом.',
     actionLabel: 'Все новости и акции',
     actionTo: '/news',
     variant: 'news',
   })
   const blogBanner = resolveBlock(blocks, 'blog_banner', {
     eyebrow: 'Советы',
-    title: 'Если не хочется ошибиться с покупкой, начните с коротких и понятных разборов',
-    text: 'Материалы написаны так, чтобы покупателю было проще выбрать снасть, катушку или приманку под реальный сценарий.',
+    title: 'Начните с коротких и понятных разборов',
+    text: 'Подборки и советы помогают быстрее выбрать снасть под реальный сценарий.',
     actionLabel: 'Открыть советы',
     actionTo: '/blog',
     variant: 'advice',
@@ -741,8 +749,8 @@ function HomePage({
   })
   const aboutBanner = resolveBlock(blocks, 'about_banner', {
     eyebrow: 'О магазине',
-    title: 'ЩУКАРЬ — это магазин, где ассортимент и консультация работают вместе',
-    text: 'Сюда удобно приехать, если нужно не просто купить снасть, а спокойно сравнить варианты, уточнить наличие и получить понятный совет.',
+    title: 'Ассортимент и консультация работают вместе',
+    text: 'Сравните варианты, уточните наличие и получите понятный совет прямо в магазине.',
     actionLabel: 'Подробнее о магазине',
     actionTo: '/about',
     variant: 'about',
@@ -766,9 +774,11 @@ function HomePage({
           <div className="hero-overlay" />
 
           <div className="hero-content" data-reveal>
-            <p className="eyebrow">{heroBlock.eyebrow}</p>
-            <h1>{heroBlock.title}</h1>
-            <p className="hero-lead">{heroBlock.text}</p>
+            <div className="hero-copy">
+              <p className="eyebrow">{heroBlock.eyebrow}</p>
+              <h1>{heroBlock.title}</h1>
+              <p className="hero-lead">{heroBlock.text}</p>
+            </div>
 
             <div className="action-row">
               {heroBlock.external ? (
@@ -956,6 +966,27 @@ function HomePage({
             <article key={quote} className="review-card" data-reveal>
               <span>★★★★★</span>
               <p>{quote}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="section container">
+        <SectionHeading
+          eyebrow="Галерея"
+          title="Посмотрите атмосферу магазина и детали ассортимента"
+          text="После отзывов удобно быстро пролистать реальные кадры, полки и настроение магазина перед визитом."
+        />
+
+        <div className="gallery-carousel" data-reveal>
+          {homeGallerySlides.map((slide) => (
+            <article key={slide.title} className="gallery-slide">
+              <img src={slide.image} alt={slide.title} loading="lazy" />
+              <div className="gallery-slide-overlay" />
+              <div className="gallery-slide-caption">
+                <strong>{slide.title}</strong>
+                <span>{slide.text}</span>
+              </div>
             </article>
           ))}
         </div>

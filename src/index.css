@@ -41,6 +41,8 @@ html {
 }
 
 body {
+  display: flex;
+  flex-direction: column;
   margin: 0;
   min-width: 320px;
   min-height: 100dvh;
@@ -109,6 +111,7 @@ h2 {
 #root {
   display: flex;
   flex-direction: column;
+  flex: 1 0 auto;
   min-height: 100dvh;
   overflow-x: hidden;
 }

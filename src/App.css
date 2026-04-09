@@ -1233,8 +1233,8 @@
 
 .product-detail {
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-  gap: 24px;
+  grid-template-columns: minmax(0, 0.65fr) minmax(0, 1.35fr);
+  gap: 32px;
 }
 
 .breadcrumbs {
@@ -1246,13 +1246,89 @@
 
 .product-visual {
   position: relative;
-  min-height: 540px;
+  min-height: 480px;
   border-radius: 32px;
   overflow: hidden;
   padding: 24px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  cursor: pointer;
+}
+
+.product-thumbnails {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+}
+
+.product-thumb-btn {
+  position: relative;
+  width: 80px;
+  flex-shrink: 0;
+  height: 80px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+  background: var(--color-surface);
+}
+
+.product-thumb-btn:hover {
+  transform: translateY(-2px);
+}
+
+.product-thumb-btn.active {
+  border-color: var(--color-sun);
+}
+
+.product-thumb-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fullscreen-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(8, 21, 26, 0.95);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.fullscreen-modal.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.fullscreen-modal-close {
+  position: absolute;
+  top: 2rem;
+  right: 2rem;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 3rem;
+  cursor: pointer;
+  z-index: 1001;
+  line-height: 1;
+}
+
+.fullscreen-modal img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 .pagination {

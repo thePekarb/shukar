@@ -31,6 +31,7 @@ export type AdminProduct = {
   specs_text: string // legacy or simple text format
   product_specs: ProductSpec[] // dynamic array
   images: string[]
+  recommended_ids: number[] // recommended products
   is_published: boolean
 }
 

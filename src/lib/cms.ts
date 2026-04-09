@@ -48,6 +48,7 @@ type ProductRow = {
   sort_order: number | null
   product_images?: { image_url: string | null; sort_order: number | null }[]
   product_specs?: { label: string; value: string; sort_order: number | null }[]
+  recommended_ids?: number[] | null
 }
 
 type StoryRow = {
@@ -175,6 +176,7 @@ function normalizeProduct(row: ProductRow): Product {
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       .map((item) => item.image_url ?? '')
       .filter(Boolean),
+    recommendedIds: row.recommended_ids ?? [],
   }
 }
 
@@ -217,7 +219,7 @@ export async function fetchCmsSnapshot(): Promise<CmsSnapshot> {
     supabase
       .from('products')
       .select(
-        'id, category_slug, slug, name, brand, price, stock_status, stock_quantity, short_text, description, season, fish, water, method, material, badges, accent, sort_order, product_images(image_url, sort_order), product_specs(label, value, sort_order)',
+        'id, category_slug, slug, name, brand, price, stock_status, stock_quantity, short_text, description, season, fish, water, method, material, badges, accent, sort_order, recommended_ids, product_images(image_url, sort_order), product_specs(label, value, sort_order)',
       )
       .eq('is_published', true)
       .order('sort_order', { ascending: true }),

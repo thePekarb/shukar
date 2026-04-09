@@ -217,10 +217,8 @@ function App() {
   }, [location.pathname])
 
   useEffect(() => {
-    const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'))
-
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      nodes.forEach((node) => node.classList.add('is-visible'))
+      document.querySelectorAll<HTMLElement>('[data-reveal]').forEach((node) => node.classList.add('is-visible'))
       return
     }
 
@@ -239,12 +237,25 @@ function App() {
       },
     )
 
-    nodes.forEach((node) => {
-      node.classList.remove('is-visible')
-      observer.observe(node)
+    const observeNodes = () => {
+      document.querySelectorAll<HTMLElement>('[data-reveal]:not(.is-visible)').forEach((node) => {
+        observer.observe(node)
+      })
+    }
+
+    observeNodes()
+
+    const mutationObserver = new MutationObserver(() => {
+      // Triggered when DOM changes, adding newly mounted elements
+      observeNodes()
     })
 
-    return () => observer.disconnect()
+    mutationObserver.observe(document.body, { childList: true, subtree: true })
+
+    return () => {
+      observer.disconnect()
+      mutationObserver.disconnect()
+    }
   }, [location.pathname])
 
   const wishlistProducts = useMemo(
@@ -1156,6 +1167,8 @@ function ProductPage({
   onToggleWishlist: (productId: number) => void
 }) {
   const { categorySlug, productSlug } = useParams()
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   if (!categorySlug || !productSlug) {
     return <Navigate to="/catalog" replace />
@@ -1167,9 +1180,33 @@ function ProductPage({
     return <Navigate to="/catalog" replace />
   }
 
-  const relatedProducts = getProductsByCategoryFromList(products, product.categorySlug)
-    .filter((item) => item.id !== product.id)
-    .slice(0, 3)
+  const currentImage = selectedImage ?? (product.images[0] || null)
+
+  const relatedProducts = useMemo(() => {
+    if (product.recommendedIds && product.recommendedIds.length > 0) {
+      return product.recommendedIds
+        .map((rid) => products.find((p) => p.id === rid))
+        .filter(Boolean) as Product[]
+    }
+    return getProductsByCategoryFromList(products, product.categorySlug)
+      .filter((item) => item.id !== product.id)
+      .slice(0, 3)
+  }, [product.recommendedIds, product.categorySlug, product.id, products])
+
+  useEffect(() => {
+    setSelectedImage(product.images[0] || null)
+  }, [product.images])
+
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isModalOpen])
 
   return (
     <>
@@ -1185,10 +1222,25 @@ function ProductPage({
         </nav>
 
         <div className="product-detail" data-reveal>
-        <div className="product-visual" style={{ background: product.accent }}>
-          {product.images[0] && <img src={product.images[0]} alt={product.name} className="product-image" />}
-          <span>{categoryMap[product.categorySlug].name}</span>
-          <strong>{product.brand}</strong>
+        <div className="product-visual-wrapper">
+          <div className="product-visual" style={{ background: product.accent }} onClick={() => setIsModalOpen(true)}>
+            {currentImage && <img src={currentImage} alt={product.name} className="product-image" />}
+            <span>{categoryMap[product.categorySlug]?.name}</span>
+            <strong>{product.brand}</strong>
+          </div>
+          {product.images.length > 1 && (
+            <div className="product-thumbnails">
+              {product.images.map((img, idx) => (
+                <button
+                  key={idx}
+                  className={`product-thumb-btn ${currentImage === img ? 'active' : ''}`}
+                  onClick={() => setSelectedImage(img)}
+                >
+                  <img src={img} alt={`${product.name} thumb ${idx + 1}`} />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
           <div className="product-main">
@@ -1198,7 +1250,7 @@ function ProductPage({
 
             <div className="meta-list">
               <span>{product.price}</span>
-              <span>{product.stock}</span>
+              {product.stock !== 'Уточнить наличие' && <span>{product.stock}</span>}
               <span>Остаток: {product.stockQuantity}</span>
               <span>{product.fish}</span>
               <span>{product.method}</span>
@@ -1256,6 +1308,11 @@ function ProductPage({
           ))}
         </div>
       </section>
+
+      <div className={`fullscreen-modal ${isModalOpen ? 'open' : ''}`} onClick={() => setIsModalOpen(false)}>
+        <button className="fullscreen-modal-close" onClick={() => setIsModalOpen(false)}>&times;</button>
+        {currentImage && <img src={currentImage} alt="Fullscreen product view" onClick={(e) => e.stopPropagation()} />}
+      </div>
     </>
   )
 }

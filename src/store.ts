@@ -26,6 +26,7 @@ export type Product = {
   accent: string
   stockQuantity: number
   images: string[]
+  recommendedIds?: number[]
 }
 
 export type StoryCard = {

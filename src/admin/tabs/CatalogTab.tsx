@@ -45,7 +45,8 @@ export function CatalogTab() {
             .map((img: any) => img.image_url),
           product_specs: (row.product_specs || [])
             .sort((a: any, b: any) => a.sort_order - b.sort_order),
-          fish_ids: row.fish_ids || []
+          fish_ids: row.fish_ids || [],
+          recommended_ids: row.recommended_ids || []
         }))
         setProducts(mappedProducts)
       }
@@ -97,6 +98,7 @@ export function CatalogTab() {
       accent: 'linear-gradient(135deg, #183a43 0%, #2d4a3e 42%, #e0b57b 100%)',
       product_specs: [],
       images: [],
+      recommended_ids: [],
       is_published: true
     })
   }
@@ -129,6 +131,7 @@ export function CatalogTab() {
         material: editingProduct.material,
         badges_text: editingProduct.badges_text,
         accent: editingProduct.accent,
+        recommended_ids: editingProduct.recommended_ids || [],
         is_published: editingProduct.is_published
       }
 
@@ -491,6 +494,49 @@ export function CatalogTab() {
                        </button>
                     )
                  })}
+              </div>
+
+              {/* Recommendations */}
+              <div className="admin-section-divider" style={{ borderTop: '1px solid #ddd', margin: '2rem 0' }} />
+              <div style={{ marginBottom: '1rem' }}>
+                 <h3>⭐ Рекомендуемые товары</h3>
+                 <p className="admin-hint">Выберите до 3 товаров, которые будут показываться в блоке "Похожие позиции".</p>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                 <select 
+                   value="" 
+                   onChange={(e) => {
+                     const id = Number(e.target.value)
+                     if (!id) return
+                     const current = editingProduct.recommended_ids || []
+                     if (current.includes(id)) return
+                     if (current.length >= 3) {
+                       alert('Можно добавить не более 3 товаров')
+                       return
+                     }
+                     setEditingProduct({ ...editingProduct, recommended_ids: [...current, id] })
+                   }}
+                   style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd' }}
+                 >
+                   <option value="">-- Добавить товар в рекомендации --</option>
+                   {products.filter(p => p.id !== editingProduct.id && !(editingProduct.recommended_ids || []).includes(p.id!)).map(p => (
+                      <option key={p.id} value={p.id || ''}>{p.name}</option>
+                   ))}
+                 </select>
+                 
+                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+                   {(editingProduct.recommended_ids || []).map(id => {
+                      const pName = products.find(p => p.id === id)?.name || `Товар #${id}`
+                      return (
+                         <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f5f5f5', padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid #ddd' }}>
+                            <span style={{ fontSize: '0.85rem' }}>{pName}</span>
+                            <button type="button" onClick={() => {
+                               setEditingProduct({ ...editingProduct, recommended_ids: (editingProduct.recommended_ids || []).filter(rid => rid !== id) })
+                            }} style={{ background: 'none', border: 'none', color: 'red', cursor: 'pointer', fontSize: '1.2rem', lineHeight: 1 }}>×</button>
+                         </div>
+                      )
+                   })}
+                 </div>
               </div>
 
               {/* Photos */}

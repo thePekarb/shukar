@@ -20,6 +20,7 @@ import {
   useSearchParams,
 } from 'react-router-dom'
 import backgroundVideo from './assets/backgroundvideo.mp4'
+import headerLogoSrc from './assets/ЛОГОТИП.png'
 import heroPoster from './assets/hero.png'
 import heroVideo from './assets/herp banner.mp4'
 import bannerBlog from './assets/Блог : советы.png'
@@ -161,6 +162,8 @@ function App() {
   const { snapshot } = useCmsSnapshot()
   const [wishlistIds, setWishlistIds] = useState<number[]>(() => loadWishlistIds())
   const [showScrollTop, setShowScrollTop] = useState(false)
+  const [isWaterTheme, setIsWaterTheme] = useState(false)
+
   const cmsProducts = snapshot.products.length ? snapshot.products : fallbackProducts
   const cmsArticles = snapshot.articles.length ? snapshot.articles : fallbackArticles
   const cmsNewsCards = snapshot.newsCards.length ? snapshot.newsCards : fallbackNewsCards
@@ -198,6 +201,14 @@ function App() {
     shellRef.current?.style.setProperty('--scroll-progress', '0')
     window.scrollTo({ top: 0, left: 0 })
   }, [location.pathname])
+
+  useEffect(() => {
+    if (isWaterTheme) {
+      document.body.classList.add('theme-water')
+    } else {
+      document.body.classList.remove('theme-water')
+    }
+  }, [isWaterTheme])
 
   useEffect(() => {
     const titles: Record<string, string> = {
@@ -287,7 +298,11 @@ function App() {
       <video className="site-background-video" autoPlay muted loop playsInline preload="auto">
         <source src={backgroundVideo} type="video/mp4" />
       </video>
-      <SiteHeader wishlistCount={wishlistProducts.length} />
+      <SiteHeader 
+        wishlistCount={wishlistProducts.length} 
+        isWaterTheme={isWaterTheme} 
+        setIsWaterTheme={setIsWaterTheme} 
+      />
 
       <main className="page-wrap">
         <Routes>
@@ -386,7 +401,15 @@ function AdminPanelFallback() {
   )
 }
 
-function SiteHeader({ wishlistCount }: { wishlistCount: number }) {
+function SiteHeader({ 
+  wishlistCount,
+  isWaterTheme,
+  setIsWaterTheme
+}: { 
+  wishlistCount: number
+  isWaterTheme: boolean
+  setIsWaterTheme: (val: boolean) => void
+}) {
   const [menuOpen, setMenuOpen] = useState(false)
   const closeMenu = () => setMenuOpen(false)
 
@@ -394,7 +417,9 @@ function SiteHeader({ wishlistCount }: { wishlistCount: number }) {
     <header className="site-header">
       <div className="container site-header-inner">
         <Link to="/" className="brand-lockup">
-          <div className="brand-mark">Щ</div>
+          <div className="brand-mark logo-img-wrapper" style={{ padding: 0, background: 'transparent' }}>
+            <img src={headerLogoSrc} alt="ЩУКАРЬ логотип" style={{ height: '36px', objectFit: 'contain' }} />
+          </div>
           <div>
             <strong>ЩУКАРЬ</strong>
             <span>рыболовный магазин в Волгограде</span>
@@ -412,6 +437,16 @@ function SiteHeader({ wishlistCount }: { wishlistCount: number }) {
         </nav>
 
         <div className="header-actions">
+          <label className="theme-toggle" aria-label="Переключить водную тему" title="Глубина">
+            <input 
+              type="checkbox" 
+              checked={isWaterTheme} 
+              onChange={(e) => setIsWaterTheme(e.target.checked)} 
+            />
+            <span className="theme-slider">
+              <span className="theme-icon">{isWaterTheme ? '🌊' : '⚓️'}</span>
+            </span>
+          </label>
           <Link to="/wishlist" className="wishlist-link">
             Избранное
             <span>{wishlistCount}</span>
@@ -1416,6 +1451,52 @@ function WishlistPage({
   )
 }
 
+function Pagination({
+  currentPage,
+  totalItems,
+  pageSize,
+  onPageChange,
+}: {
+  currentPage: number
+  totalItems: number
+  pageSize: number
+  onPageChange: (page: number) => void
+}) {
+  const totalPages = Math.ceil(totalItems / pageSize)
+  if (totalPages <= 1) return null
+
+  return (
+    <div className="pagination">
+      <button
+        type="button"
+        className="pagination-btn"
+        disabled={currentPage === 1}
+        onClick={() => onPageChange(currentPage - 1)}
+      >
+        ←
+      </button>
+      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+        <button
+          key={page}
+          type="button"
+          className={`pagination-btn ${currentPage === page ? 'active' : ''}`}
+          onClick={() => onPageChange(page)}
+        >
+          {page}
+        </button>
+      ))}
+      <button
+        type="button"
+        className="pagination-btn"
+        disabled={currentPage === totalPages}
+        onClick={() => onPageChange(currentPage + 1)}
+      >
+        →
+      </button>
+    </div>
+  )
+}
+
 function BlogPage({
   cards,
   blocks,
@@ -1467,6 +1548,9 @@ function GalleryPage({
   blocks: Record<string, ContentBlock>
   galleryMoments: string[]
 }) {
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 9
+  
   const banner = resolveBlock(blocks, 'gallery_banner', {
     eyebrow: 'Галерея',
     title: 'Так выглядит магазин, в который приятно приехать за выбором вживую',
@@ -1476,6 +1560,9 @@ function GalleryPage({
     external: true,
     variant: 'gallery',
   })
+
+  // We only show images in 3x3 grid as requested, no textual cards
+  const currentSlides = gallerySlides.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   return (
     <section className="section container">
@@ -1490,21 +1577,29 @@ function GalleryPage({
         variant={banner.variant}
       />
 
-      <GalleryCarousel slides={gallerySlides} />
-
-      <div className="gallery-grid">
-        {gallerySlides.map((item, index) => (
+      <div className="gallery-grid three-columns">
+        {currentSlides.map((item) => (
           <article
-            key={item.title}
-            className="gallery-card gallery-summary-card"
+            key={item.image}
+            className="gallery-card gallery-image-card"
             data-reveal
           >
-            <span>Кадр {index + 1}</span>
-            <strong>{galleryMoments[index] ?? item.title}</strong>
-            <p>{item.text}</p>
+            <div className="gallery-image-wrapper">
+              <img src={item.image} alt={item.title} />
+            </div>
+            <div className="gallery-image-info">
+               <strong>{item.title}</strong>
+            </div>
           </article>
         ))}
       </div>
+
+      <Pagination 
+        currentPage={currentPage}
+        totalItems={gallerySlides.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+      />
     </section>
   )
 }
@@ -1556,6 +1651,49 @@ function AboutPage({
 }
 
 function ContactsPage() {
+  const mapRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    
+    if (document.getElementById('yamaps-script')) {
+      if ((window as any).ymaps) {
+         (window as any).ymaps.ready(initMap)
+      }
+      return
+    }
+
+    const script = document.createElement('script')
+    script.id = 'yamaps-script'
+    script.src = 'https://api-maps.yandex.ru/2.1/?apikey=bafcd910-6f11-4ead-970e-00d35a89733f&lang=ru_RU'
+    script.async = true
+    script.onload = () => {
+      (window as any).ymaps.ready(initMap)
+    }
+    document.head.appendChild(script)
+
+    function initMap() {
+      if (!mapRef.current) return;
+      mapRef.current.innerHTML = '';
+      const map = new (window as any).ymaps.Map(mapRef.current, {
+        center: [48.651408, 44.434563],
+        zoom: 17,
+        controls: ['zoomControl']
+      })
+      
+      const placemark = new (window as any).ymaps.Placemark([48.651408, 44.434563], 
+        { balloonContent: 'ЩУКАРЬ: Волгоград, Университетский проспект, 82' }, 
+        {
+          iconLayout: 'default#image',
+          iconImageHref: headerLogoSrc,
+          iconImageSize: [60, 60],
+          iconImageOffset: [-30, -30]
+        }
+      )
+      map.geoObjects.add(placemark)
+    }
+  }, [])
+
   return (
     <section className="section container">
       <PageIntro
@@ -1582,17 +1720,8 @@ function ContactsPage() {
           </div>
         </article>
 
-        <article className="map-card" data-reveal>
-          <div className="map-surface">
-            <div className="map-pin" />
-            <div className="map-line map-line-1" />
-            <div className="map-line map-line-2" />
-            <div className="map-line map-line-3" />
-          </div>
-          <div className="map-text">
-            <strong>Перед поездкой лучше уточнить наличие</strong>
-            <p>Так вы сразу поймете, есть ли нужная позиция в магазине, и при желании сможете попросить короткий резерв.</p>
-          </div>
+        <article className="map-card" style={{ padding: 0, height: '440px', overflow: 'hidden', display: 'block' }} data-reveal>
+          <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
         </article>
       </div>
     </section>
@@ -1648,6 +1777,9 @@ function ContentIndexPage({
   blocks: Record<string, ContentBlock>
   blockKey: string
 }) {
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 9
+
   const block = resolveBlock(blocks, blockKey, {
     eyebrow,
     title,
@@ -1656,6 +1788,8 @@ function ContentIndexPage({
     actionTo: '/catalog',
     variant,
   })
+
+  const currentCards = cards.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   return (
     <section className="section container">
@@ -1671,7 +1805,7 @@ function ContentIndexPage({
       />
 
       <div className="story-grid three-columns">
-        {cards.map((card) => (
+        {currentCards.map((card) => (
           <Link
             key={card.slug}
             to={`${basePath}/${card.slug}`}
@@ -1687,6 +1821,13 @@ function ContentIndexPage({
           </Link>
         ))}
       </div>
+
+      <Pagination 
+        currentPage={currentPage}
+        totalItems={cards.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+      />
     </section>
   )
 }

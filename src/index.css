@@ -65,6 +65,20 @@ body::before {
   mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.35), transparent 76%);
 }
 
+/* Water Theme Overrides */
+body.theme-water {
+  --color-ink: #000c29;   /* Экстремальная глубина */
+  --color-deep: #11344b;  /* Водная толща */
+  --color-water: #008695; /* Морская волна */
+  --color-forest: #11344b;
+  --color-foam: #ffffff;  /* Чисто белый текст */
+  --surface-card: rgba(17, 52, 75, 0.65);
+  
+  background:
+    radial-gradient(circle at 20% 0%, rgba(223, 186, 132, 0.09), transparent 20%),
+    linear-gradient(180deg, #11344b 0%, #000c29 100%);
+}
+
 a {
   color: inherit;
   text-decoration: none;
